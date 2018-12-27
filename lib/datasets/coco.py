@@ -34,13 +34,14 @@ class coco(imdb):
     self._year = year
     self._image_set = image_set
     self._data_path = osp.join(cfg.DATA_DIR, 'coco')
+    self.ids = [61]  # cake
+
     # load COCO API, classes, class <-> id mappings
     self._COCO = COCO(self._get_ann_file())
-    cats = self._COCO.loadCats(self._COCO.getCatIds())
+    cats = self._COCO.loadCats(self.ids)
     self._classes = tuple(['__background__'] + [c['name'] for c in cats])
     self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
-    self._class_to_coco_cat_id = dict(list(zip([c['name'] for c in cats],
-                                               self._COCO.getCatIds())))
+    self._class_to_coco_cat_id = dict(list(zip([c['name'] for c in cats], self.ids)))
     self._image_index = self._load_image_set_index()
     # Default to roidb handler
     self.set_proposal_method('gt')
@@ -72,7 +73,13 @@ class coco(imdb):
     """
     Load image ids.
     """
-    image_ids = self._COCO.getImgIds()
+    # image_ids = self._COCO.getImgIds()
+
+    imgs = []
+    for i in self.ids:
+      imgs += self._COCO.getImgIds(catIds=i)
+
+    image_ids = imgs
     return image_ids
 
   def _get_widths(self):
@@ -92,12 +99,17 @@ class coco(imdb):
     """
     # Example image path for index=119993:
     #   images/train2014/COCO_train2014_000000119993.jpg
-    file_name = ('COCO_' + self._data_name + '_' +
-                 str(index).zfill(12) + '.jpg')
+
+    file_name = (str(index).zfill(12) + '.jpg')
     image_path = osp.join(self._data_path, 'images',
-                          self._data_name, file_name)
-    assert osp.exists(image_path), \
-      'Path does not exist: {}'.format(image_path)
+                          self._data_name, file_name) 
+
+    if osp.exists(image_path):
+      return image_path
+    else:
+      print('Path does not exist: {}'.format(image_path))
+      return ""
+
     return image_path
 
   def gt_roidb(self):
